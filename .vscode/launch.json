@@ -2,12 +2,61 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flask: Hello World",
+            "name": "Flask: SQLite + banco local",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/app/app.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
+            "env": {
+                "DATABASE_ADAPTER": "sqlite",
+                "SQLITE_DATABASE_PATH": "${workspaceFolder}/app/enderecos.db",
+                "CEP_LOOKUP_ADAPTER": "database"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Flask: SQLite + Correios",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/app.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "DATABASE_ADAPTER": "sqlite",
+                "SQLITE_DATABASE_PATH": "${workspaceFolder}/app/enderecos.db",
+                "CEP_LOOKUP_ADAPTER": "correios",
+                "CORREIOS_API_TOKEN": "${env:CORREIOS_API_TOKEN}"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Flask: PostgreSQL + banco local",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/app.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "DATABASE_ADAPTER": "postgres",
+                "DATABASE_URL": "${env:DATABASE_URL}",
+                "CEP_LOOKUP_ADAPTER": "database"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Flask: PostgreSQL + Correios",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/app.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "env": {
+                "DATABASE_ADAPTER": "postgres",
+                "DATABASE_URL": "${env:DATABASE_URL}",
+                "CEP_LOOKUP_ADAPTER": "correios",
+                "CORREIOS_API_TOKEN": "${env:CORREIOS_API_TOKEN}"
+            },
             "justMyCode": true
         }
     ]
