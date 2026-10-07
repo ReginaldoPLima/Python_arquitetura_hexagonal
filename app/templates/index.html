@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Endereços por CEP</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18332e;
+      --muted: #647771;
+      --line: #d7e1dc;
+      --paper: #fbfcf8;
+      --green: #176b52;
+      --green-dark: #10513e;
+      --coral: #c45139;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", sans-serif; }
+    header { background: var(--ink); color: white; padding: 30px max(24px, calc((100vw - 1080px) / 2)); }
+    .eyebrow { margin: 0 0 8px; color: #a9d5bd; font-size: 12px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: 28px; font-weight: 600; }
+    main { max-width: 1080px; margin: 30px auto; padding: 0 24px 40px; }
+    .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 30px; }
+    section { border-top: 2px solid var(--green); padding-top: 16px; }
+    h2 { margin: 0 0 14px; font-size: 18px; }
+    .search-row { display: flex; gap: 8px; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 13px; }
+    input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 3px; background: white; color: var(--ink); font: inherit; }
+    input:focus { outline: 2px solid #8dc2a7; outline-offset: 1px; }
+    button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 3px; background: var(--green); color: white; font: inherit; font-weight: 600; cursor: pointer; }
+    button:hover { background: var(--green-dark); }
+    #save-button { margin-top: 14px; }
+    .notice { min-height: 20px; margin: 9px 0 0; color: var(--muted); font-size: 13px; }
+    .notice.error { color: var(--coral); }
+    .table-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .table-head p { color: var(--muted); font-size: 13px; }
+    .table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    th { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    td:first-child { color: var(--green-dark); font-weight: 600; white-space: nowrap; }
+    @media (max-width: 680px) {
+      header { padding: 24px; }
+      main { margin-top: 24px; }
+      .tools, .fields { grid-template-columns: 1fr; }
+      .tools { gap: 25px; }
+      .fields { gap: 9px; }
+      .table-head { align-items: flex-start; flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Cadastro local · SQLite</p>
+    <h1>Endereços por CEP</h1>
+  </header>
+  <main>
+    <div class="tools">
+      <section aria-labelledby="search-title">
+        <h2 id="search-title">Buscar endereço</h2>
+        <form id="search-form" class="search-row">
+          <label for="search-cep" hidden>CEP</label>
+          <input id="search-cep" name="cep" inputmode="numeric" placeholder="00000-000" maxlength="9">
+          <button type="submit">Buscar</button>
+        </form>
+        <p id="search-message" class="notice" role="status"></p>
+      </section>
+      <section aria-labelledby="save-title">
+        <h2 id="save-title">Cadastrar endereço</h2>
+        <form id="save-form">
+          <div class="fields">
+            <div><label for="cep">CEP</label><input id="cep" name="cep" inputmode="numeric" placeholder="00000-000" maxlength="9" required></div>
+            <div><label for="logradouro">Logradouro</label><input id="logradouro" name="logradouro" required></div>
+            <div><label for="bairro">Bairro</label><input id="bairro" name="bairro" required></div>
+            <div><label for="cidade">Cidade</label><input id="cidade" name="cidade" required></div>
+            <div><label for="uf">UF</label><input id="uf" name="uf" maxlength="2" required></div>
+          </div>
+          <button id="save-button" type="submit">Salvar endereço</button>
+          <p id="save-message" class="notice" role="status"></p>
+        </form>
+      </section>
+    </div>
+    <section aria-labelledby="list-title">
+      <div class="table-head">
+        <h2 id="list-title">Endereços cadastrados</h2>
+        <p>Os 50 endereços iniciais são dados de demonstração.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>CEP</th><th>Logradouro</th><th>Bairro</th><th>Cidade</th><th>UF</th></tr></thead>
+          <tbody id="address-list"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const list = document.querySelector("#address-list");
+
+    function showMessage(element, message, isError = false) {
+      element.textContent = message;
+      element.classList.toggle("error", isError);
+    }
+
+    function renderAddresses(addresses) {
+      list.replaceChildren();
+      for (const address of addresses) {
+        const row = document.createElement("tr");
+        for (const value of [address.cep, address.logradouro, address.bairro, address.cidade, address.uf]) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.append(cell);
+        }
+        list.append(row);
+      }
+    }
+
+    async function loadAddresses(cep = "") {
+      const query = cep ? `?cep=${encodeURIComponent(cep)}` : "";
+      const response = await fetch(`/api/enderecos${query}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.erro);
+      renderAddresses(result.enderecos);
+      return result.enderecos;
+    }
+
+    document.querySelector("#search-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = document.querySelector("#search-message");
+      try {
+        const addresses = await loadAddresses(event.currentTarget.elements.cep.value);
+        showMessage(message, addresses.length ? `${addresses.length} endereço(s) encontrado(s).` : "Nenhum endereço encontrado para este CEP.");
+      } catch (error) {
+        showMessage(message, error.message, true);
+      }
+    });
+
+    document.querySelector("#save-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const message = document.querySelector("#save-message");
+      const data = Object.fromEntries(new FormData(form));
+      try {
+        const response = await fetch("/api/enderecos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.erro);
+        form.reset();
+        showMessage(message, "Endereço salvo com sucesso.");
+        await loadAddresses();
+      } catch (error) {
+        showMessage(message, error.message, true);
+      }
+    });
+
+    loadAddresses().catch((error) => showMessage(document.querySelector("#search-message"), error.message, true));
+  </script>
+</body>
+</html>

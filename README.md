@@ -1,80 +1,39 @@
-# Python Arquitetura Hexagonal
+# Aplicação Flask em Camadas
 
-Aplicacao basica com Flask e banco de dados PostgreSQL executado via Docker.
+Aplicação tradicional em camadas para cadastrar e buscar endereços pelo CEP. As rotas da camada de apresentação chamam a camada de serviço, que aplica validações e usa o repositório para acessar o SQLite. Na primeira execução, são criados 50 registros de demonstração em `app/enderecos.db`.
 
-## Pre-requisitos no Windows 11
+## Executar no Windows
 
-Instale o [Docker Desktop para Windows](https://www.docker.com/products/docker-desktop/) e habilite o backend **WSL 2** durante a instalacao. Abra o Docker Desktop e aguarde o status `Engine running` antes de executar os comandos abaixo.
-
-Confirme a instalacao em um novo PowerShell:
-
-```powershell
-docker --version
-docker info
-```
-
-## Executar a aplicacao Flask
-
-No PowerShell, a partir da raiz do projeto:
+Na raiz do projeto, pelo PowerShell:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\activate.bat
+.venv\Scripts\Activate.ps1
 python -m pip install -r app\requirements.txt
-python app\app.py
+python -m app.app
 ```
 
-A aplicacao ficara disponivel em http://localhost:5000.
+Acesse http://localhost:5000. O SQLite faz parte da biblioteca padrão do Python, então não é necessário iniciar um servidor de banco ou Docker.
 
-## Criar e executar o PostgreSQL
+## Camadas
 
-Construa a imagem do banco:
+- `app/presentation`: rotas Flask e comunicação HTTP.
+- `app/service`: validação e regras da aplicação.
+- `app/repository`: persistência e consultas SQLite.
+- `app/templates`: tela de busca e cadastro.
 
-```powershell
-docker build -t arquitetura-postgres ./banco
-```
+## API
 
-Crie um volume nomeado e suba o container:
+- `GET /api/enderecos` lista os endereços.
+- `GET /api/enderecos?cep=01001-000` busca pelo CEP.
+- `POST /api/enderecos` cadastra um endereço com JSON:
 
-```powershell
-docker volume create postgres_data
-docker run --name arquitetura-postgres -p 5432:5432 -v postgres_data:/var/lib/postgresql/data -d arquitetura-postgres
-```
-
-O banco sera criado com os seguintes dados:
-
-- Banco: `app_db`
-- Usuario: `app_user`
-- Senha: `app_password`
-- Host: `localhost`
-- Porta: `5432`
-
-## Gerenciar o banco
-
-Verifique o container:
-
-```powershell
-docker ps
-docker logs arquitetura-postgres
-```
-
-Pare ou inicie o container:
-
-```powershell
-docker stop arquitetura-postgres
-docker start arquitetura-postgres
-```
-
-Para remover apenas o container, mantendo os dados no volume:
-
-```powershell
-docker rm -f arquitetura-postgres
-```
-
-Depois, recrie o container usando o mesmo volume `postgres_data`.
-
-Para remover permanentemente os dados do banco:
-
-```powershell
-docker volume rm postgres_data
+```json
+{
+	"cep": "12345-678",
+	"logradouro": "Rua das Flores",
+	"bairro": "Centro",
+	"cidade": "Campinas",
+	"uf": "SP"
+}
 ```
